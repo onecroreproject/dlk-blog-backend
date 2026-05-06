@@ -25,17 +25,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Strip nginx proxy prefix if present (nginx passes full path without stripping)
-app.use((req, res, next) => {
-  req.originalUrlBeforeStrip = req.url;
-  if (req.url.startsWith('/projectblogs-api')) {
-    // Replace the prefix and ensure it still starts with a slash
-    let newUrl = req.url.replace('/projectblogs-api', '');
-    if (!newUrl.startsWith('/')) newUrl = '/' + newUrl;
-    req.url = newUrl;
-  }
-  next();
-});
+
 
 // Debug route to check path mapping
 app.get("/debug-path", (req, res) => {
