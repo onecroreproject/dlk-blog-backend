@@ -16,8 +16,6 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 // Handle nginx proxy prefix (required for your setup)
 app.use((req, res, next) => {
   if (req.url.startsWith('/projectblogs-api')) {
@@ -26,6 +24,8 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Debug Route
 app.get("/debug-path", (req, res) => {
