@@ -2,38 +2,28 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+
 const blogRoutes = require("./routes/blogRoutes");
 const otpRoutes = require("./routes/otpRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const newsletterRoutes = require("./routes/newsletterRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+
 require("dotenv").config();
 
 const app = express();
 
-// ABSOLUTE TOP LEVEL DEBUG ROUTES
-app.get("/projectblogs-api/debug-path", (req, res) => {
-  res.json({ message: "RAW PREFIX MATCH" });
-});
-
-app.get("/debug-path", (req, res) => {
-  res.json({ message: "REWRITTEN MATCH" });
-});
-
 // Middleware
 app.use(cors());
 app.use(express.json());
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-
-
-// Debug route to check path mapping
+// Debug Route
 app.get("/debug-path", (req, res) => {
   res.json({
-    originalUrl: req.originalUrlBeforeStrip,
-    transformedUrl: req.url,
-    match: "Success! The debug route was hit.",
-    headers: req.headers
+    message: "Backend working successfully",
+    url: req.url
   });
 });
 
@@ -51,6 +41,7 @@ mongoose.connect(process.env.BLOG_DB_URI)
 
 // Server Start
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
