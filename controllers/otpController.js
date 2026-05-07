@@ -36,11 +36,15 @@ exports.generateOtp = async (req, res) => {
 
 exports.getLatestOtp = async (req, res) => {
   try {
-    let latestOtp = await Otp.findOne().sort({ createdAt: -1 });
     const now = new Date();
 
-    // If no OTP or expired, generate a new one automatically
-    if (!latestOtp || now > latestOtp.expiresAt) {
+    // Remove any expired OTPs first to keep the DB clean
+    await Otp.deleteMany({ expiresAt: { $lt: now } });
+
+    let latestOtp = await Otp.findOne().sort({ createdAt: -1 });
+
+    // If no OTP exists (or all were expired and deleted), generate a new one
+    if (!latestOtp) {
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       
       // Set expiry to 11:59 PM IST (which is 18:29:59 UTC)
