@@ -16,9 +16,14 @@ exports.generateOtp = async (req, res) => {
     // Generate 4-digit OTP
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     
-    // Set expiry to midnight
+    // Set expiry to 11:59 PM IST (which is 18:29:59 UTC)
     const expiresAt = new Date();
-    expiresAt.setHours(23, 59, 59, 999);
+    expiresAt.setUTCHours(18, 29, 59, 999);
+
+    // If it's already past 11:59 PM IST today, set for tomorrow's 11:59 PM IST
+    if (now > expiresAt) {
+      expiresAt.setUTCDate(expiresAt.getUTCDate() + 1);
+    }
 
     const newOtp = new Otp({ code, expiresAt });
     await newOtp.save();
@@ -38,9 +43,14 @@ exports.getLatestOtp = async (req, res) => {
     if (!latestOtp || now > latestOtp.expiresAt) {
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       
-      // Set expiry to midnight
+      // Set expiry to 11:59 PM IST (which is 18:29:59 UTC)
       const expiresAt = new Date();
-      expiresAt.setHours(23, 59, 59, 999);
+      expiresAt.setUTCHours(18, 29, 59, 999);
+
+      // If it's already past 11:59 PM IST today, set for tomorrow's 11:59 PM IST
+      if (now > expiresAt) {
+        expiresAt.setUTCDate(expiresAt.getUTCDate() + 1);
+      }
 
       latestOtp = new Otp({ code, expiresAt });
       await latestOtp.save();
