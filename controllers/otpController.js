@@ -2,9 +2,23 @@ const Otp = require("../models/Otp");
 
 exports.generateOtp = async (req, res) => {
   try {
+    const now = new Date();
+    
+    // Calculate current IST date (UTC + 5:30)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    
+    // Target: 11:59:59.999 PM IST for today (which is 18:29:59.999 UTC)
+    // We use the IST date components to ensure we target the correct calendar day in India
+    const expiresAt = new Date(Date.UTC(
+      istNow.getUTCFullYear(),
+      istNow.getUTCMonth(),
+      istNow.getUTCDate(),
+      18, 29, 59, 999
+    ));
+
     // Check if there's already an active (non-expired) OTP
     const latestOtp = await Otp.findOne().sort({ createdAt: -1 });
-    const now = new Date();
     
     if (latestOtp && now <= latestOtp.expiresAt) {
       return res.status(200).json({ 
@@ -16,15 +30,6 @@ exports.generateOtp = async (req, res) => {
     // Generate 4-digit OTP
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     
-    // Set expiry to 11:59 PM IST (which is 18:29:59 UTC)
-    const expiresAt = new Date();
-    expiresAt.setUTCHours(18, 29, 59, 999);
-
-    // If it's already past 11:59 PM IST today, set for tomorrow's 11:59 PM IST
-    if (now > expiresAt) {
-      expiresAt.setUTCDate(expiresAt.getUTCDate() + 1);
-    }
-
     const newOtp = new Otp({ code, expiresAt });
     await newOtp.save();
 
@@ -37,6 +42,18 @@ exports.generateOtp = async (req, res) => {
 exports.getLatestOtp = async (req, res) => {
   try {
     const now = new Date();
+    
+    // Calculate current IST date (UTC + 5:30)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    
+    // Target: 11:59:59.999 PM IST for today (which is 18:29:59.999 UTC)
+    const expiresAt = new Date(Date.UTC(
+      istNow.getUTCFullYear(),
+      istNow.getUTCMonth(),
+      istNow.getUTCDate(),
+      18, 29, 59, 999
+    ));
 
     // Remove any expired OTPs first to keep the DB clean
     await Otp.deleteMany({ expiresAt: { $lt: now } });
@@ -47,15 +64,6 @@ exports.getLatestOtp = async (req, res) => {
     if (!latestOtp) {
       const code = Math.floor(1000 + Math.random() * 9000).toString();
       
-      // Set expiry to 11:59 PM IST (which is 18:29:59 UTC)
-      const expiresAt = new Date();
-      expiresAt.setUTCHours(18, 29, 59, 999);
-
-      // If it's already past 11:59 PM IST today, set for tomorrow's 11:59 PM IST
-      if (now > expiresAt) {
-        expiresAt.setUTCDate(expiresAt.getUTCDate() + 1);
-      }
-
       latestOtp = new Otp({ code, expiresAt });
       await latestOtp.save();
     }
