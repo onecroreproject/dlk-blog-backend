@@ -2,6 +2,17 @@ const Otp = require("../models/Otp");
 
 exports.generateOtp = async (req, res) => {
   try {
+    // Check if there's already an active (non-expired) OTP
+    const latestOtp = await Otp.findOne().sort({ createdAt: -1 });
+    const now = new Date();
+    
+    if (latestOtp && now <= latestOtp.expiresAt) {
+      return res.status(200).json({ 
+        message: "Active OTP already exists", 
+        otp: latestOtp 
+      });
+    }
+
     // Generate 4-digit OTP
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     
