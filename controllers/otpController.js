@@ -31,16 +31,19 @@ exports.generateOtp = async (req, res) => {
 
 exports.getLatestOtp = async (req, res) => {
   try {
-    const latestOtp = await Otp.findOne().sort({ createdAt: -1 });
-    
-    if (!latestOtp) {
-      return res.status(404).json({ message: "No OTP found" });
-    }
-
-    // Check if valid (not expired)
+    let latestOtp = await Otp.findOne().sort({ createdAt: -1 });
     const now = new Date();
-    if (now > latestOtp.expiresAt) {
-      return res.status(410).json({ message: "OTP expired", isExpired: true });
+
+    // If no OTP or expired, generate a new one automatically
+    if (!latestOtp || now > latestOtp.expiresAt) {
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      
+      // Set expiry to midnight
+      const expiresAt = new Date();
+      expiresAt.setHours(23, 59, 59, 999);
+
+      latestOtp = new Otp({ code, expiresAt });
+      await latestOtp.save();
     }
 
     res.json(latestOtp);
