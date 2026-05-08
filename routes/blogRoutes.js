@@ -12,6 +12,7 @@ router.post("/", upload.fields([
 
 router.get("/", blogController.getAllBlogs);
 router.get("/:id", blogController.getBlogById);
+router.get("/slug/:slug", blogController.getBlogBySlug);
 router.put("/:id", upload.fields([
   { name: "titleImage", maxCount: 1 },
   { name: "blogImage1", maxCount: 1 },

@@ -1,5 +1,24 @@
 const Blog = require("../models/Blog");
 
+const generateSlug = async (title) => {
+  let slug = title
+    .toLowerCase()
+    .replace(/[^\w ]+/g, "")
+    .replace(/ +/g, "-");
+
+  let slugExists = await Blog.findOne({ slug });
+  let counter = 1;
+  let originalSlug = slug;
+
+  while (slugExists) {
+    slug = `${originalSlug}-${counter}`;
+    slugExists = await Blog.findOne({ slug });
+    counter++;
+  }
+
+  return slug;
+};
+
 exports.createBlog = async (req, res) => {
   try {
     const { title, category, author, content, tags, isEditorsChoice } = req.body;
@@ -22,8 +41,11 @@ exports.createBlog = async (req, res) => {
       }
     }
 
+    const slug = await generateSlug(title);
+
     const newBlog = new Blog({
       title,
+      slug,
       category,
       author,
       content,
@@ -59,6 +81,16 @@ exports.getBlogById = async (req, res) => {
     res.json(blog);
   } catch (error) {
     res.status(500).json({ message: "Error fetching blog", error: error.message });
+  }
+};
+
+exports.getBlogBySlug = async (req, res) => {
+  try {
+    const blog = await Blog.findOne({ slug: req.params.slug });
+    if (!blog) return res.status(404).json({ message: "Blog not found" });
+    res.json(blog);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching blog by slug", error: error.message });
   }
 };
 
@@ -99,6 +131,10 @@ exports.updateBlog = async (req, res) => {
       blogImage2: getFilePath("blogImage2"),
       authorAvatar: getFilePath("authorAvatar"),
     };
+
+    if (title && title !== existingBlog.title) {
+      updatedData.slug = await generateSlug(title);
+    }
 
     const updatedBlog = await Blog.findByIdAndUpdate(blogId, updatedData, { new: true });
     res.json({ message: "Blog updated successfully!", blog: updatedBlog });
