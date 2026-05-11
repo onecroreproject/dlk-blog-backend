@@ -24,8 +24,24 @@ const generateSlug = async (title) => {
 exports.createBlog = async (req, res) => {
   try {
     const { title, category, author, content, tags, isEditorsChoice } = req.body;
-    const files = req.files;
+    
+    // BACKEND VALIDATION: Prevent "content required" DB errors
+    if (!title || !category || !author || !content) {
+      console.error("Missing required fields in createBlog:", { 
+        title: !!title, 
+        category: !!category, 
+        author: !!author, 
+        content: !!content 
+      });
+      return res.status(400).json({ 
+        message: "Missing required fields", 
+        fields: { title, category, author, content: !!content } 
+      });
+    }
 
+    const files = req.files;
+    console.log(`Creating blog: "${title}" by ${author} (Content length: ${content.length})`);
+    
     const getFilePath = (fieldName) => {
       if (files[fieldName] && files[fieldName][0]) {
         return files[fieldName][0].path.replace(/\\/g, "/");
@@ -155,6 +171,14 @@ exports.updateBlog = async (req, res) => {
     const { title, category, author, content, tags, isEditorsChoice } = req.body;
     const files = req.files;
     const blogId = req.params.id;
+
+    // Validation for update
+    if (!title || !category || !author || !content) {
+      console.error("Missing fields for update:", { title: !!title, category: !!category, author: !!author, content: !!content });
+      return res.status(400).json({ message: "Missing required fields for update" });
+    }
+
+    console.log(`Updating blog: "${title}" (ID: ${blogId}) | Content Length: ${content.length}`);
 
     const existingBlog = await Blog.findById(blogId);
     if (!existingBlog) return res.status(404).json({ message: "Blog not found" });
