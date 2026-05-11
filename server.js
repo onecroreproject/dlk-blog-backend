@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const compression = require("compression");
 
 const blogRoutes = require("./routes/blogRoutes");
 const otpRoutes = require("./routes/otpRoutes");
@@ -15,6 +16,7 @@ const app = express();
 
 // Middleware
 app.use(cors());
+app.use(compression());
 app.use(express.json());
 // Handle nginx proxy prefix (required for your setup)
 app.use((req, res, next) => {
@@ -43,8 +45,13 @@ app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/messages", messageRoutes);
 
 // Database Connection
+console.log("Attempting to connect to MongoDB...");
+const dbStart = Date.now();
 mongoose.connect(process.env.BLOG_DB_URI)
-  .then(() => console.log("Database connected successfully"))
+  .then(() => {
+    const dbDuration = Date.now() - dbStart;
+    console.log(`Database connected successfully in ${dbDuration}ms`);
+  })
   .catch((err) => console.log("Database connection failed", err));
 
 // Server Start

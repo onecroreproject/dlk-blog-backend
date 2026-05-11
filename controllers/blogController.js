@@ -66,10 +66,50 @@ exports.createBlog = async (req, res) => {
 };
 
 exports.getAllBlogs = async (req, res) => {
+  console.log("--- getAllBlogs request received ---");
+  const start = Date.now();
   try {
-    const blogs = await Blog.find().sort({ createdAt: -1 });
+    const { minimal } = req.query;
+    let blogs;
+    
+    console.log(`Fetching blogs (minimal: ${minimal})...`);
+    
+    if (minimal === 'true') {
+      // Use aggregation to truncate content at the database level
+      // This is MUCH faster as it avoids transferring megabytes of HTML per request
+      blogs = await Blog.aggregate([
+        { $sort: { createdAt: -1 } },
+        {
+          $project: {
+            title: 1,
+            slug: 1,
+            category: 1,
+            author: 1,
+            createdAt: 1,
+            titleImage: 1,
+            views: 1,
+            shares: 1,
+            isEditorsChoice: 1,
+            tags: 1,
+            content: { $substr: ["$content", 0, 200] }
+          }
+        }
+      ]);
+    } else {
+      blogs = await Blog.find().sort({ createdAt: -1 }).lean();
+    }
+    
+    const duration = Date.now() - start;
+    console.log(`--- getAllBlogs completed in ${duration}ms ---`);
+    
+    // Set Cache-Control for minimal requests to 1 minute
+    if (minimal === 'true') {
+      res.set('Cache-Control', 'public, max-age=60');
+    }
+    
     res.json(blogs);
   } catch (error) {
+    console.error("Error in getAllBlogs:", error);
     res.status(500).json({ message: "Error fetching blogs", error: error.message });
   }
 };

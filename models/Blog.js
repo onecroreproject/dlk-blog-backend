@@ -14,7 +14,7 @@ const blogSchema = new mongoose.Schema({
   shares: { type: Number, default: 0 },
   isEditorsChoice: { type: Boolean, default: false },
   slug: { type: String, unique: true, sparse: true },
-  createdAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: Date.now, index: true },
 });
 
 module.exports = mongoose.model('Blog', blogSchema,'Blog');
