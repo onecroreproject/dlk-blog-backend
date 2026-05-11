@@ -1,4 +1,6 @@
 const Blog = require("../models/Blog");
+const NodeCache = require("node-cache");
+const blogCache = new NodeCache({ stdTTL: 600 }); // Cache for 10 minutes by default
 
 const generateSlug = async (title) => {
   let slug = title
@@ -58,6 +60,7 @@ exports.createBlog = async (req, res) => {
     });
 
     await newBlog.save();
+    blogCache.flushAll(); // Clear cache on new blog
     res.status(201).json({ message: "Blog saved successfully!", blog: newBlog });
   } catch (error) {
     console.error(error);
@@ -70,13 +73,22 @@ exports.getAllBlogs = async (req, res) => {
   const start = Date.now();
   try {
     const { minimal } = req.query;
+    const isMinimal = minimal !== 'false';
+    const cacheKey = `blogs_${isMinimal}`;
+    
+    // Check Cache
+    const cachedData = blogCache.get(cacheKey);
+    if (cachedData) {
+      console.log(`--- Serving ${cacheKey} from Cache ---`);
+      return res.json(cachedData);
+    }
+
     let blogs;
+    const count = await Blog.countDocuments();
+    console.log(`Fetching blogs (minimal: ${isMinimal}). Total in DB: ${count}`);
     
-    console.log(`Fetching blogs (minimal: ${minimal})...`);
-    
-    if (minimal === 'true') {
+    if (isMinimal) {
       // Use aggregation to truncate content at the database level
-      // This is MUCH faster as it avoids transferring megabytes of HTML per request
       blogs = await Blog.aggregate([
         { $sort: { createdAt: -1 } },
         {
@@ -100,10 +112,14 @@ exports.getAllBlogs = async (req, res) => {
     }
     
     const duration = Date.now() - start;
-    console.log(`--- getAllBlogs completed in ${duration}ms ---`);
+    const payloadSize = JSON.stringify(blogs).length;
+    console.log(`--- getAllBlogs completed in ${duration}ms | Payload: ${(payloadSize / 1024).toFixed(2)} KB ---`);
     
-    // Set Cache-Control for minimal requests to 1 minute
-    if (minimal === 'true') {
+    // Set Cache
+    blogCache.set(cacheKey, blogs);
+    
+    // Set Cache-Control for browser
+    if (isMinimal) {
       res.set('Cache-Control', 'public, max-age=60');
     }
     
@@ -177,6 +193,7 @@ exports.updateBlog = async (req, res) => {
     }
 
     const updatedBlog = await Blog.findByIdAndUpdate(blogId, updatedData, { new: true });
+    blogCache.flushAll(); // Clear cache on update
     res.json({ message: "Blog updated successfully!", blog: updatedBlog });
   } catch (error) {
     console.error(error);
@@ -188,6 +205,7 @@ exports.deleteBlog = async (req, res) => {
   try {
     const blog = await Blog.findByIdAndDelete(req.params.id);
     if (!blog) return res.status(404).json({ message: "Blog not found" });
+    blogCache.flushAll(); // Clear cache on delete
     res.json({ message: "Blog deleted successfully!" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting blog", error: error.message });
